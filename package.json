@@ -1,0 +1,19 @@
+{
+  "name": "service-seal",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Basic protocol for device-signed prepaid service sessions.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test test/session.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.0.0"
+  },
+  "license": "MIT"
+}
