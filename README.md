@@ -1,21 +1,21 @@
 # ServiceSeal
 
-ServiceSeal is a TypeScript protocol reference for prepaid service sessions backed by device-signed consumption receipts.
+ServiceSeal is a TypeScript protocol reference for a CKB-backed prepaid service session. A registered terminal signs each measured debit; the session state accepts only the next valid receipt and stores a compact, deterministic Cell-data representation.
 
-## Overview
+## Features
 
-A customer opens a session with prepaid credit. When service is consumed, a registered device signs an incremental receipt that authorises the debit.
+- Ed25519 device receipt signing and verification
+- Strict sequence and balance enforcement
+- Fixed-size 100-byte Cell-data encoding (`SS01`)
+- Rejection tests for replay, forged signatures, altered use, unexpected fields, mismatched terminal/session, skipped sequence and overdraw
 
-## Setup and Tests
+## Run Tests and Build
 
 ```sh
-npm install
 npm test
 npm run build
 ```
 
-## Protocol Concept
+## Protocol Specifications
 
-- Device receipt signing via Ed25519
-- Strict next-sequence enforcement
-- Non-negative balance constraints
+See [docs/protocol.md](docs/protocol.md) for the byte-level cell layout and receipt verification rules.

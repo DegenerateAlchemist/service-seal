@@ -2,16 +2,33 @@ import { sign, verify, type KeyObject } from 'node:crypto';
 import { canonicalJson, sha256Hex } from './canonical.js';
 import type { ReceiptPayload, SignedReceipt } from './types.js';
 
+const RECEIPT_FIELDS = ['issuedAt', 'sequence', 'sessionId', 'terminalId', 'usedUnits', 'version'];
+
+function requireHex(value: unknown, bytes: number, field: string): asserts value is string {
+  if (typeof value !== 'string' || !new RegExp(`^[0-9a-f]{${bytes * 2}}$`, 'i').test(value)) {
+    throw new Error(`${field} must be ${bytes} bytes of hexadecimal`);
+  }
+}
+
 export function assertReceiptPayload(payload: unknown): asserts payload is ReceiptPayload {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new Error('receipt payload must be an object');
   }
-  const p = payload as Record<string, unknown>;
-  if (typeof p.terminalId !== 'string' || typeof p.sessionId !== 'string') {
-    throw new Error('receipt payload missing identifiers');
+  const obj = payload as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  if (keys.length !== RECEIPT_FIELDS.length || keys.some((key, index) => key !== RECEIPT_FIELDS[index])) {
+    throw new Error('receipt payload has an unexpected field');
   }
-  if (typeof p.sequence !== 'number' || typeof p.usedUnits !== 'number') {
-    throw new Error('receipt sequence and usedUnits must be numbers');
+  if (obj.version !== 1) {
+    throw new Error('unsupported receipt version');
+  }
+  requireHex(obj.terminalId, 32, 'terminalId');
+  requireHex(obj.sessionId, 16, 'sessionId');
+  for (const field of ['sequence', 'usedUnits', 'issuedAt']) {
+    const val = obj[field];
+    if (typeof val !== 'number' || !Number.isSafeInteger(val) || val <= 0) {
+      throw new Error(`${field} must be a positive safe integer`);
+    }
   }
 }
 

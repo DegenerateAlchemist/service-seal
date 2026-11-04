@@ -1,8 +1,8 @@
 {
   "name": "service-seal",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
-  "description": "Basic protocol for device-signed prepaid service sessions.",
+  "description": "Protocol reference for device-signed prepaid service sessions on CKB.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

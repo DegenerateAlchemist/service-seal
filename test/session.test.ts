@@ -3,7 +3,10 @@ import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import test from 'node:test';
 import {
   applyReceipt,
+  cellCommitment,
   createSessionState,
+  decodeCellData,
+  encodeCellData,
   signReceipt
 } from '../src/index.js';
 
@@ -44,7 +47,47 @@ test('rejects a receipt signed by another device', () => {
   assert.throws(() => applyReceipt(state, receipt(), other.publicKey), /signature/);
 });
 
+test('rejects a receipt for another terminal', () => {
+  const { state, publicKey, receipt } = fixture();
+  assert.throws(() => applyReceipt(state, receipt({ terminalId: randomBytes(32).toString('hex') }), publicKey), /terminal/);
+});
+
+test('rejects a receipt for another session', () => {
+  const { state, publicKey, receipt } = fixture();
+  assert.throws(() => applyReceipt(state, receipt({ sessionId: randomBytes(16).toString('hex') }), publicKey), /session/);
+});
+
+test('rejects a skipped receipt sequence', () => {
+  const { state, publicKey, receipt } = fixture();
+  assert.throws(() => applyReceipt(state, receipt({ sequence: 2 }), publicKey), /sequence/);
+});
+
+test('rejects altered usage after the device signs', () => {
+  const { state, publicKey, receipt } = fixture();
+  const altered = { ...receipt(), usedUnits: 21 };
+  assert.throws(() => applyReceipt(state, altered, publicKey), /signature/);
+});
+
 test('rejects overdrawn usage', () => {
   const { state, publicKey, receipt } = fixture();
   assert.throws(() => applyReceipt(state, receipt({ usedUnits: 81 }), publicKey), /insufficient/);
+});
+
+test('rejects a signed receipt with an unrecognised field', () => {
+  const { state, publicKey, receipt } = fixture();
+  const signed = receipt();
+  assert.throws(() => applyReceipt(state, { ...signed, note: 'ignored?' } as any, publicKey), /signature/);
+});
+
+test('rejects a malformed state before applying a receipt', () => {
+  const { state, publicKey, receipt } = fixture();
+  assert.throws(() => applyReceipt({ ...state, creditUnits: -1 }, receipt(), publicKey), /creditUnits/);
+});
+
+test('encodes one deterministic fixed-size cell-data record', () => {
+  const { state } = fixture();
+  const encoded = encodeCellData(state);
+  assert.equal(encoded.length, 100);
+  assert.deepEqual(decodeCellData(encoded), state);
+  assert.equal(cellCommitment(state), cellCommitment(decodeCellData(encoded)));
 });
