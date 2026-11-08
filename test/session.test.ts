@@ -3,10 +3,13 @@ import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import test from 'node:test';
 import {
   applyReceipt,
+  applyReceiptBatch,
   cellCommitment,
   createSessionState,
   decodeCellData,
+  decodeSessionWitness,
   encodeCellData,
+  encodeSessionWitness,
   signReceipt
 } from '../src/index.js';
 
@@ -90,4 +93,40 @@ test('encodes one deterministic fixed-size cell-data record', () => {
   assert.equal(encoded.length, 100);
   assert.deepEqual(decodeCellData(encoded), state);
   assert.equal(cellCommitment(state), cellCommitment(decodeCellData(encoded)));
+});
+
+test('applies a batch of sequential receipts correctly', () => {
+  const { state, publicKey, privateKey, terminalId, sessionId } = fixture();
+  const r1 = signReceipt({ version: 1, terminalId, sessionId, sequence: 1, usedUnits: 15, issuedAt: 1794000001 }, privateKey);
+  const r2 = signReceipt({ version: 1, terminalId, sessionId, sequence: 2, usedUnits: 25, issuedAt: 1794000010 }, privateKey);
+  const r3 = signReceipt({ version: 1, terminalId, sessionId, sequence: 3, usedUnits: 10, issuedAt: 1794000020 }, privateKey);
+
+  const batchResult = applyReceiptBatch(state, [r1, r2, r3], publicKey);
+  assert.equal(batchResult.state.creditUnits, 30);
+  assert.equal(batchResult.state.lastSequence, 3);
+  assert.equal(batchResult.totalUsedUnits, 50);
+  assert.equal(batchResult.receiptIds.length, 3);
+});
+
+test('rejects a batch with a sequence gap or overdraw', () => {
+  const { state, publicKey, privateKey, terminalId, sessionId } = fixture();
+  const r1 = signReceipt({ version: 1, terminalId, sessionId, sequence: 1, usedUnits: 20, issuedAt: 1794000001 }, privateKey);
+  const rGap = signReceipt({ version: 1, terminalId, sessionId, sequence: 3, usedUnits: 20, issuedAt: 1794000010 }, privateKey);
+  assert.throws(() => applyReceiptBatch(state, [r1, rGap], publicKey), /sequence/);
+
+  const rOverdraw = signReceipt({ version: 1, terminalId, sessionId, sequence: 2, usedUnits: 70, issuedAt: 1794000010 }, privateKey);
+  assert.throws(() => applyReceiptBatch(state, [r1, rOverdraw], publicKey), /insufficient/);
+});
+
+test('encodes and decodes a CKB session witness payload', () => {
+  const { publicKey, receipt } = fixture();
+  const r = receipt();
+  const witness = encodeSessionWitness(r, publicKey);
+  assert.equal(witness.version, 1);
+  assert.ok(witness.witnessBytes.length > 0);
+
+  const decoded = decodeSessionWitness(witness.witnessBytes);
+  assert.equal(decoded.version, 1);
+  assert.deepEqual(decoded.receipt, r);
+  assert.equal(decoded.publicKeyDerHex, witness.publicKeyDerHex);
 });

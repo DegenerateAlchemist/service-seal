@@ -26,9 +26,22 @@ export interface TransitionResult {
   receiptId: string;
 }
 
+export interface BatchTransitionResult {
+  state: SessionState;
+  receiptIds: string[];
+  totalUsedUnits: number;
+}
+
 export interface CreateSessionParams {
   terminalId: string;
   sessionId: string;
   devicePublicKey: KeyObject;
   creditUnits: number;
+}
+
+export interface SessionWitness {
+  version: number;
+  receipt: SignedReceipt;
+  publicKeyDerHex: string;
+  witnessBytes: Buffer;
 }

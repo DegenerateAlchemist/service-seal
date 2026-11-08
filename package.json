@@ -1,14 +1,15 @@
 {
   "name": "service-seal",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "private": true,
-  "description": "Protocol reference for device-signed prepaid service sessions on CKB.",
+  "description": "Reference protocol for device-signed, prepaid service credits on CKB.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "tsx --test test/session.test.ts"
+    "test": "tsx --test test/session.test.ts",
+    "demo": "tsx bin/demo.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

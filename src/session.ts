@@ -1,6 +1,12 @@
 import { createHash, type KeyObject } from 'node:crypto';
 import { receiptId, verifyReceipt } from './receipt.js';
-import type { CreateSessionParams, SessionState, SignedReceipt, TransitionResult } from './types.js';
+import type {
+  BatchTransitionResult,
+  CreateSessionParams,
+  SessionState,
+  SignedReceipt,
+  TransitionResult
+} from './types.js';
 
 export function publicKeyHash(publicKey: KeyObject): string {
   return createHash('sha256').update(publicKey.export({ type: 'spki', format: 'der' })).digest('hex');
@@ -72,5 +78,33 @@ export function applyReceipt(state: SessionState, receipt: SignedReceipt, device
       lastSequence: receipt.sequence
     },
     receiptId: receiptId(receipt)
+  };
+}
+
+export function applyReceiptBatch(
+  initialState: SessionState,
+  receipts: SignedReceipt[],
+  devicePublicKey: KeyObject
+): BatchTransitionResult {
+  assertSessionState(initialState);
+  if (!Array.isArray(receipts) || receipts.length === 0) {
+    throw new Error('receipts batch must be a non-empty array');
+  }
+
+  let currentState = initialState;
+  const receiptIds: string[] = [];
+  let totalUsedUnits = 0;
+
+  for (const receipt of receipts) {
+    const result = applyReceipt(currentState, receipt, devicePublicKey);
+    currentState = result.state;
+    receiptIds.push(result.receiptId);
+    totalUsedUnits += receipt.usedUnits;
+  }
+
+  return {
+    state: currentState,
+    receiptIds,
+    totalUsedUnits
   };
 }
